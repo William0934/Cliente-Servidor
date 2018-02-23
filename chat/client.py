@@ -18,19 +18,26 @@ def main():
     s.send_json({"op":"register","id":id})
     resp = s.recv_json()
     if resp["flag"]:
-        #Hilo de reproduccion
         while True:
             print ("\n----Menu----")
             print ("- 'list'                    ......... Listar usuarios conectados")
             print ("- 'invite' {id de usuario}  ......... Invitar a sesion (sin llaves)")
             operation = input("Digite la operacion a ejecutar: ")
-            if operation == "list":
+            operation = operation.split()
+            if operation[0] == "list":
                 s.send_json({"op":"list"})
                 ids=s.recv_json()
                 print(" Los usuarios disponibles son:")
-                for i in ids["IDs"]:
+                for i in ids["IDs"]:    
                     if i!=id:
                         print("   {}".format(i))
+            elif operation[0]== "invite":
+                s.send_json({"op":"invite","id":operation[1]})
+                msg=s.recv_json()
+                if msg["answer"]=="yes":
+                    operation[0] = "connect"
+                elif msg["answer"]=="no":
+                else:
 
     else:
         print("Error!!! invalid id")
