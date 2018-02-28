@@ -3,7 +3,12 @@ import sys
 from collections import namedtuple
 
 
-queue=[]
+
+import pyaudio
+import wave
+
+
+
 
 def main():
     if len(sys.argv) != 4:
@@ -25,70 +30,60 @@ def main():
     poller = zmq.Poller()
     poller.register(sys.stdin, zmq.POLLIN)
     poller.register(s, zmq.POLLIN)
+    
+ 
+    FORMAT = pyaudio.paInt16
+    CHANNELS = 2
+    RATE = 44100
+    CHUNK = 1024
+    RECORD_SECONDS = 0.3
+ 
+    p = pyaudio.PyAudio()
+    
+    stream = p.open(format = FORMAT,
+                channels = CHANNELS,
+                rate = RATE,
+                input = True,
+                output = True,
+                frames_per_buffer = CHUNK)
+
     print ("\n----Menu----")
     print ("- 'bring' {id de usuario}  ......... Invitar a sesion (sin llaves)")
+    print ("- 'exit'                   ......... Salir del programa")
 
     while True:
         socks = dict(poller.poll())
         if s in socks:
             op, msg = s.recv_multipart()
-            print ("LLEGO: ",op,msg)
             if op.decode()=="connect":
                 connected = True
             elif op.decode()=="play":
-                print(msg)
+                
+                frames = #COMO RECIBIR FRAMES
+                for frame in frames:
+                    stream.write(frame, CHUNK)
 
         if sys.stdin.fileno() in socks:
             command = input()
             command = command.split()
             if command[0]=="bring":
-                s.send_multipart([bytes(command[0], 'ascii'),bytes(command[1], 'ascii') ])
+                s.send_multipart([bytes(command[0], 'ascii'),bytes(command[1], 'ascii')])
+            elif command[0]=="exit":
+                s.send_multipart([bytes(command[0], 'ascii'),bytes("NA", 'ascii')])
+                break
             else:
                 print( ' Operacion no soportada')
         if connected:
+            frames = []
+            for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+                frames.append(stream.read(CHUNK))
+            #COMO ENVIAR FRAMES
             s.send_multipart([bytes('send', 'ascii'),bytes("audio", 'ascii') ])
+        
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
 
     
-
-    """if resp["flag"]:
-        while True:
-            operation = input("Digite la operacion a ejecutar: ")
-            operation = operation.split()
-            if operation[0] == "list":
-                s.send_json({"op":"list"})
-                ids=s.recv_json()
-                print(" Los usuarios disponibles son:")
-                for i in ids["IDs"]:    
-                    if i!=id:
-                        print("   {}".format(i))
-            elif operation[0]== "invite":
-                s.send_json({"op":"invite","id":operation[1],"who":ids})
-                msg=s.recv_json()
-                if msg["answer"]=="yes":
-                    operation[0] = "connect"
-                elif msg["answer"]=="no":
-                    print(" El usuario {} ya esta en una sesion".format(operation[1]))
-                else:
-                    print(" El usuario {} no fue encontrado".format(operation[1]))
-            elif operation[0]=="connect":
-                s = context.socket(zmq.DEALER)
-                s.identity = id
-                s.connect("tcp://{}:{}".format(ip, port))
-                poller = zmq.Poller()
-                poller.register(sys.stdin, zmq.POLLIN)
-                poller.register(s, zmq.POLLIN)
-                #CREAR HILO DE REPRODUCCION ACA
-
-                while True:
-                    socks = dict(poller.poll())
-                    if socket in socks:
-                        sender, m = socket.recv_multipart()
-                        queue.append(m)
-            else:
-                print(" ERROR: Operacion invalida")
-
-    else:
-        print("Error!!! invalid id")"""
-
 if __name__ == '__main__':
      main()
