@@ -6,9 +6,10 @@ import threading
 
 import pyaudio
 
+queue={}
 
-def play(list):
-    print ("Creo hilo con {}".format(list[0:1]))
+def play(id):
+    global queue
     FORMAT = pyaudio.paInt16
     CHANNELS = 2
     RATE = 44100
@@ -23,10 +24,10 @@ def play(list):
                             frames_per_buffer = CHUNK)
     while True:
         if len(list)!=0:
-            frames=list.pop(0)
+            frames=queue[id].pop(0)
             for frame in frames:
-                print(frame)
                 stream.write(frame, CHUNK)
+        else:print("Lista vacia")
 
 
 def main():
@@ -57,8 +58,10 @@ def main():
     
     p = pyaudio.PyAudio()
     first=True
+
+    global queue
  
-    queue={}
+    
     print ("\n----Menu----")
     print ("- 'bring' {id de usuario}  ......... Invitar a sesion (sin llaves)")
     print ("- 'exit'                   ......... Salir del programa")
@@ -73,11 +76,11 @@ def main():
             elif op.decode()=="play":               
                 #RECIBIENDO FRAMES
                 if msg[0] in queue:
-                    queue[msg[0]].append(msg[1:0])
+                    queue[msg[0]].append([msg[1:]])
                 else: 
                     queue[msg[0]]=[]
-                    queue[msg[0]].append(msg[1:0])
-                    threads.append( threading.Thread(target=play,args=(queue[msg[0]])))
+                    queue[msg[0]].append([msg[1:]])
+                    threads.append( threading.Thread(target=play,args=(msg[0])))
                     threads[-1].start()
         if sys.stdin.fileno() in socks:
             command = input()

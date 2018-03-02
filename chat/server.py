@@ -40,6 +40,7 @@ def main():
             i=whereIs(sessions,ident)
             dest.insert(0,"id")
             dest.insert(1,bytes("play", 'ascii'))
+            dest.insert(2,ident)
             for id in sessions[i]:
                 dest[0]=id
                 if id!=ident:
