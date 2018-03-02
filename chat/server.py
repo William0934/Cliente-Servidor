@@ -25,13 +25,14 @@ def main():
     sessions=[]
 
     while True:
+        print(sessions)
         ident, op , *dest= socket.recv_multipart()
         if op.decode()=="bring":
             i=whereIs(sessions,ident)
             d=whereIs(sessions,op[1])
             if d == -1:
                 if i!= -1:
-                    sessions[i].append(op)
+                    sessions[i].append(dest[0])
                 else:
                     sessions.append([dest[0],ident])
                 socket.send_multipart([dest[0] ,bytes("connect", 'ascii'), bytes("NA", 'ascii')])

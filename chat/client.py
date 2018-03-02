@@ -57,7 +57,7 @@ def main():
         if sys.stdin.fileno() in socks:
             command = input()
             command = command.split()
-            if command[0]=="bring" and not connected:
+            if command[0]=="bring":
                 s.send_multipart([bytes(command[0], 'ascii'),bytes(command[1], 'ascii')])
                 connected=True
             elif command[0]=="exit":
