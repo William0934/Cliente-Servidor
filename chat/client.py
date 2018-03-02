@@ -8,6 +8,7 @@ import pyaudio
 
 
 def play(list):
+    print ("Creo hilo con {}".format(list[0:1]))
     FORMAT = pyaudio.paInt16
     CHANNELS = 2
     RATE = 44100
@@ -24,6 +25,7 @@ def play(list):
         if len(list)!=0:
             frames=list.pop(0)
             for frame in frames:
+                print(frame)
                 stream.write(frame, CHUNK)
 
 
@@ -73,8 +75,8 @@ def main():
                 if msg[0] in queue:
                     queue[msg[0]].append(msg[1:0])
                 else: 
-                    queue[msg[0]]=[msg[1:]]
-                    print("Creando hilo {} con la lista {}".format(len(queue),queue[msg[0]]))
+                    queue[msg[0]]=[]
+                    queue[msg[0]].append(msg[1:0])
                     threads.append( threading.Thread(target=play,args=(queue[msg[0]])))
                     threads[-1].start()
         if sys.stdin.fileno() in socks:
