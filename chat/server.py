@@ -33,7 +33,7 @@ def main():
                 if i!= -1:
                     sessions[i].append(op)
                 else:
-                    sessions.append([ident,dest[0]])
+                    sessions.append([dest[0],ident])
                 socket.send_multipart([dest[0] ,bytes("connect", 'ascii'), bytes("NA", 'ascii')])
         elif op.decode()=="send":
             i=whereIs(sessions,ident)

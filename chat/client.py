@@ -30,22 +30,14 @@ def main():
     poller = zmq.Poller()
     poller.register(sys.stdin, zmq.POLLIN)
     poller.register(s, zmq.POLLIN)
-    
- 
+    p = pyaudio.PyAudio()
     FORMAT = pyaudio.paInt16
     CHANNELS = 2
     RATE = 44100
     CHUNK = 1024
     RECORD_SECONDS = 0.3
+    first=False
  
-    p = pyaudio.PyAudio()
-    
-    stream = p.open(format = FORMAT,
-                channels = CHANNELS,
-                rate = RATE,
-                input = True,
-                output = True,
-                frames_per_buffer = CHUNK)
     queue={}
     print ("\n----Menu----")
     print ("- 'bring' {id de usuario}  ......... Invitar a sesion (sin llaves)")
@@ -57,6 +49,7 @@ def main():
             op , *msg= s.recv_multipart()
             if op.decode()=="connect":
                 connected = True
+                first = True
             elif op.decode()=="play":               
                 #RECIBIENDO FRAMES
                 if msg[0] in queue:
@@ -75,6 +68,18 @@ def main():
                 print( ' Operacion no soportada')
         if connected:
             #GRABANDO
+            
+            if first:
+            
+                stream = p.open(format = FORMAT,
+                            channels = CHANNELS,
+                            rate = RATE,
+                            input = True,
+                            output = True,
+                            frames_per_buffer = CHUNK)
+                
+                first = False
+        
             frames = [bytes('send', 'ascii')]
             for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
                 frames.append(stream.read(CHUNK))
@@ -86,11 +91,10 @@ def main():
                     frames = queue[key].pop(0)
                     for frame in frames:
                         stream.write(frame, CHUNK)
-
-        
+    p.terminate()        
     stream.stop_stream()
     stream.close()
-    p.terminate()
+    
 
     
 if __name__ == '__main__':
