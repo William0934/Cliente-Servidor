@@ -25,7 +25,6 @@ def main():
     sessions=[]
 
     while True:
-        print(sessions)
         ident, op , *dest= socket.recv_multipart()
         if op.decode()=="bring":
             i=whereIs(sessions,ident)

@@ -27,7 +27,6 @@ def play(id):
             frames=queue[id].pop(0)
             for frame in frames:
                 stream.write(frame, CHUNK)
-        else:print("Lista vacia")
 
 
 def main():
