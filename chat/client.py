@@ -23,7 +23,7 @@ def play(id):
                             output = True,
                             frames_per_buffer = CHUNK)
     while True:
-        if len(list)!=0:
+        if len(queue[id])!=0:
             frames=queue[id].pop(0)
             for frame in frames:
                 stream.write(frame, CHUNK)
@@ -76,11 +76,11 @@ def main():
             elif op.decode()=="play":               
                 #RECIBIENDO FRAMES
                 if msg[0] in queue:
-                    queue[msg[0]].append([msg[1:]])
+                    queue[msg[0]].append(msg[1:])
                 else: 
                     queue[msg[0]]=[]
-                    queue[msg[0]].append([msg[1:]])
-                    threads.append( threading.Thread(target=play,args=(msg[0])))
+                    queue[msg[0]].append(msg[1:])
+                    threads.append( threading.Thread(target=play,args=(msg[0],)))
                     threads[-1].start()
         if sys.stdin.fileno() in socks:
             command = input()
