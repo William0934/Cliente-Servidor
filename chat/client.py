@@ -36,7 +36,7 @@ def main():
     RATE = 44100
     CHUNK = 1024
     RECORD_SECONDS = 0.3
-    first=False
+    first=True
  
     queue={}
     print ("\n----Menu----")
@@ -49,7 +49,6 @@ def main():
             op , *msg= s.recv_multipart()
             if op.decode()=="connect":
                 connected = True
-                first = True
             elif op.decode()=="play":               
                 #RECIBIENDO FRAMES
                 if msg[0] in queue:
@@ -67,19 +66,15 @@ def main():
             else:
                 print( ' Operacion no soportada')
         if connected:
-            #GRABANDO
-            
-            if first:
-            
+            if first:           
                 stream = p.open(format = FORMAT,
                             channels = CHANNELS,
                             rate = RATE,
                             input = True,
                             output = True,
                             frames_per_buffer = CHUNK)
-                
-                first = False
-        
+
+                first = False        
             frames = [bytes('send', 'ascii')]
             for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
                 frames.append(stream.read(CHUNK))
