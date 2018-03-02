@@ -46,7 +46,7 @@ def main():
                 input = True,
                 output = True,
                 frames_per_buffer = CHUNK)
-    queue=[]
+    queue={}
     print ("\n----Menu----")
     print ("- 'bring' {id de usuario}  ......... Invitar a sesion (sin llaves)")
     print ("- 'exit'                   ......... Salir del programa")
@@ -59,7 +59,9 @@ def main():
                 connected = True
             elif op.decode()=="play":               
                 #RECIBIENDO FRAMES
-                queue.append(msg)
+                if msg[0] in queue:
+                    queue[msg[0]].append(msg[1:0])
+                else: queue[msg[0]]=[msg[1:]] 
         if sys.stdin.fileno() in socks:
             command = input()
             command = command.split()
@@ -79,10 +81,11 @@ def main():
             #ENVIANDO FRAMES
             s.send_multipart(frames)
             #REPRODUCIENDO
-            if len(queue)>0:
-                frames = queue.pop(0)
-                for frame in frames:
-                    stream.write(frame, CHUNK)
+            for key in queue:  #HACER JOIN DE FRAMES ACA
+                if len(queue[key])>0:
+                    frames = queue[key].pop(0)
+                    for frame in frames:
+                        stream.write(frame, CHUNK)
 
         
     stream.stop_stream()
