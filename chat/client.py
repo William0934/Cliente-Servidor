@@ -7,13 +7,13 @@ import threading
 import pyaudio
 
 
-def play(list,p):
+def play(list):
     FORMAT = pyaudio.paInt16
     CHANNELS = 2
     RATE = 44100
     CHUNK = 1024
     RECORD_SECONDS = 0.3
-    
+    p = pyaudio.PyAudio()
     stream = p.open(format = FORMAT,
                             channels = CHANNELS,
                             rate = RATE,
@@ -74,7 +74,8 @@ def main():
                     queue[msg[0]].append(msg[1:0])
                 else: 
                     queue[msg[0]]=[msg[1:]]
-                    threads.append( threading.Thread(target=play,args=(queue[msg[0]],p)))
+                    print("Creando hilo {} con la lista {}".format(len(queue),queue[msg[0]]))
+                    threads.append( threading.Thread(target=play,args=(queue[msg[0]])))
                     threads[-1].start()
         if sys.stdin.fileno() in socks:
             command = input()
