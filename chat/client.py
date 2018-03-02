@@ -46,7 +46,7 @@ def main():
                 input = True,
                 output = True,
                 frames_per_buffer = CHUNK)
-
+    queue=[]
     print ("\n----Menu----")
     print ("- 'bring' {id de usuario}  ......... Invitar a sesion (sin llaves)")
     print ("- 'exit'                   ......... Salir del programa")
@@ -54,31 +54,36 @@ def main():
     while True:
         socks = dict(poller.poll())
         if s in socks:
-            op, msg = s.recv_multipart()
+            op , *msg= s.recv_multipart()
             if op.decode()=="connect":
                 connected = True
-            elif op.decode()=="play":
-                
-                frames = #COMO RECIBIR FRAMES
-                for frame in frames:
-                    stream.write(frame, CHUNK)
-
+            elif op.decode()=="play":               
+                #RECIBIENDO FRAMES
+                queue.append(msg)
         if sys.stdin.fileno() in socks:
             command = input()
             command = command.split()
-            if command[0]=="bring":
+            if command[0]=="bring" and not connected:
                 s.send_multipart([bytes(command[0], 'ascii'),bytes(command[1], 'ascii')])
+                connected=True
             elif command[0]=="exit":
                 s.send_multipart([bytes(command[0], 'ascii'),bytes("NA", 'ascii')])
                 break
             else:
                 print( ' Operacion no soportada')
         if connected:
-            frames = []
+            #GRABANDO
+            frames = [bytes('send', 'ascii')]
             for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
                 frames.append(stream.read(CHUNK))
-            #COMO ENVIAR FRAMES
-            s.send_multipart([bytes('send', 'ascii'),bytes("audio", 'ascii') ])
+            #ENVIANDO FRAMES
+            s.send_multipart(frames)
+            #REPRODUCIENDO
+            if len(queue)>0:
+                frames = queue.pop(0)
+                for frame in frames:
+                    stream.write(frame, CHUNK)
+
         
     stream.stop_stream()
     stream.close()

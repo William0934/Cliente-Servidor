@@ -25,24 +25,27 @@ def main():
     sessions=[]
 
     while True:
-        ident, op, dest = socket.recv_multipart()
+        ident, op , *dest= socket.recv_multipart()
         if op.decode()=="bring":
             i=whereIs(sessions,ident)
-            d=whereIs(sessions,dest)
+            d=whereIs(sessions,op[1])
             if d == -1:
                 if i!= -1:
-                    sessions[i].append(dest)
+                    sessions[i].append(op)
                 else:
-                    sessions.append([ident,dest])
-                socket.send_multipart([dest ,bytes("connect", 'ascii'), bytes("NA", 'ascii')])
+                    sessions.append([ident,dest[0]])
+                socket.send_multipart([dest[0] ,bytes("connect", 'ascii'), bytes("NA", 'ascii')])
         elif op.decode()=="send":
             i=whereIs(sessions,ident)
+            dest.insert(0,"id")
+            dest.insert(1,bytes("play", 'ascii'))
             for id in sessions[i]:
-                socket.send_multipart([id ,bytes("play", 'ascii'),bytes(str(sessions[i]), 'ascii') ])
+                dest[0]=id
+                if id!=ident:
+                    socket.send_multipart(dest)
         elif op.decode()=="exit":
             i=whereIs(sessions,ident)
             sessions[i].remove(ident)
-        print(sessions)
 
 if __name__ == '__main__':
     main()
