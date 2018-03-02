@@ -2,12 +2,23 @@ import zmq
 import sys
 from collections import namedtuple
 
-
+import threading
 
 import pyaudio
-import wave
 
 
+def play(list):
+    stream = p.open(format = FORMAT,
+                            channels = CHANNELS,
+                            rate = RATE,
+                            input = False,
+                            output = True,
+                            frames_per_buffer = CHUNK)
+    while True:
+        if len(list)>-1:
+            frames=list.pop(0)
+                for frame in frames:
+                    stream.write(frame, CHUNK)
 
 
 def main():
@@ -43,6 +54,7 @@ def main():
     print ("- 'bring' {id de usuario}  ......... Invitar a sesion (sin llaves)")
     print ("- 'exit'                   ......... Salir del programa")
 
+    threads=[]
     while True:
         socks = dict(poller.poll())
         if s in socks:
@@ -53,7 +65,10 @@ def main():
                 #RECIBIENDO FRAMES
                 if msg[0] in queue:
                     queue[msg[0]].append(msg[1:0])
-                else: queue[msg[0]]=[msg[1:]] 
+                else: 
+                    queue[msg[0]]=[msg[1:]]
+                    threads.append( threading.Thread(target=play),args=(queue[msg[0]]))
+                    threads[-1].start()
         if sys.stdin.fileno() in socks:
             command = input()
             command = command.split()
@@ -71,7 +86,7 @@ def main():
                             channels = CHANNELS,
                             rate = RATE,
                             input = True,
-                            output = True,
+                            output = False,
                             frames_per_buffer = CHUNK)
 
                 first = False        
@@ -80,12 +95,7 @@ def main():
                 frames.append(stream.read(CHUNK))
             #ENVIANDO FRAMES
             s.send_multipart(frames)
-            #REPRODUCIENDO
-            for key in queue:  #HACER JOIN DE FRAMES ACA
-                if len(queue[key])>0:
-                    frames = queue[key].pop(0)
-                    for frame in frames:
-                        stream.write(frame, CHUNK)
+                    
     p.terminate()        
     stream.stop_stream()
     stream.close()
