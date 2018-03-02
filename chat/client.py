@@ -7,7 +7,13 @@ import threading
 import pyaudio
 
 
-def play(list):
+def play(list,p):
+    FORMAT = pyaudio.paInt16
+    CHANNELS = 2
+    RATE = 44100
+    CHUNK = 1024
+    RECORD_SECONDS = 0.3
+    
     stream = p.open(format = FORMAT,
                             channels = CHANNELS,
                             rate = RATE,
@@ -15,10 +21,10 @@ def play(list):
                             output = True,
                             frames_per_buffer = CHUNK)
     while True:
-        if len(list)>-1:
+        if len(list)!=0:
             frames=list.pop(0)
-                for frame in frames:
-                    stream.write(frame, CHUNK)
+            for frame in frames:
+                stream.write(frame, CHUNK)
 
 
 def main():
@@ -41,12 +47,13 @@ def main():
     poller = zmq.Poller()
     poller.register(sys.stdin, zmq.POLLIN)
     poller.register(s, zmq.POLLIN)
-    p = pyaudio.PyAudio()
     FORMAT = pyaudio.paInt16
     CHANNELS = 2
     RATE = 44100
     CHUNK = 1024
     RECORD_SECONDS = 0.3
+    
+    p = pyaudio.PyAudio()
     first=True
  
     queue={}
@@ -67,7 +74,7 @@ def main():
                     queue[msg[0]].append(msg[1:0])
                 else: 
                     queue[msg[0]]=[msg[1:]]
-                    threads.append( threading.Thread(target=play),args=(queue[msg[0]]))
+                    threads.append( threading.Thread(target=play,args=(queue[msg[0]],p)))
                     threads[-1].start()
         if sys.stdin.fileno() in socks:
             command = input()
