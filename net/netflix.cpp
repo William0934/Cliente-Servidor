@@ -9,7 +9,8 @@
 
 #include <ctime>    //medir el tiempo de ejecucion
 
-#define USERS 94802
+#define USERS 102
+#define MOVIES 17770
 
 using namespace std;
 
@@ -18,7 +19,7 @@ using namespace std;
 //Las instancias de la clase movie contienen el id de una pelicula y la respectiva calificacion que un usuario le ha dado
 class movie{
 private:
-	unsigned short id;
+	int id;
 	char grade;
 public:
 	movie(unsigned short ID,char GR){
@@ -75,10 +76,31 @@ private:
 	int id;
 	list<movie> movies;
 public:
-	user(int Id){id=Id;};
-	user(){};
-	~user(){
-		movies.clear();
+	user(int Id){id=Id;}
+	user(){}
+	user(const user &u){
+		id=u.id;
+		movies = u.movies;
+	}
+	user(list<user> group,int Id){
+		id=Id;
+		int siz=MOVIES *2;
+		float data[siz];
+		for (int i = 0;i<siz;i++)data[i]=0;
+		list<user>::iterator it;
+		list<movie>::iterator temp;
+		int pos;
+		for(it=group.begin();it!=group.end();it++){
+			for(temp = it->movies.begin();temp!=it->movies.end();temp++){
+				pos=2*(temp->getId()-1);
+				data[pos]=data[pos]+temp->getGrade();
+				data[pos+1]=data[pos+1]+1;
+			}
+		}
+		for(int i=0;i<siz;i=i+2)
+			if((data[i])>0)
+				movies.push_back(movie((i/2)+1,round(data[i]/data[i+1])));
+		cout<<"CENTROIDE NUEVO "<<endl;
 	}
 	void addMovie(movie m){
 		movies.push_back(m);			
@@ -91,13 +113,18 @@ public:
 	
 	bool print(){
 		cout<<id<<": "<<endl;
-		for(list<movie>::iterator it = movies.begin(); it != movies.end(); it++ )
+		int i=0;
+		for(list<movie>::iterator it = movies.begin(); it != movies.end() and i<10; it++ ){
 			cout<<" -Id pelicula: "<<it->getId()<<"    Calificacion: "<<(int)it->getGrade()<<endl;
+			i++;
+		}
+
 		return true;
 		
 	}
 
-	double distance(user us){
+	double distance(user us,bool over){
+		if (over)cout<<" calculando para un centroide con "<<size()<<" y un centroide con "<<us.size()<<endl;
 		list<movie>::iterator big=movies.end();
 		big--;    
 		list<movie>::iterator bigEnd; 
@@ -150,8 +177,8 @@ public:
 				sum+=(a*a);
 				big++;
 			}
-		}			
-		return sqrt(sum);
+		}		
+		return sum;
 	}
 	
 };
@@ -161,14 +188,16 @@ class netflix{
 private:
 	user *users;
 public:
-	netflix(string location,string file){
+	netflix(){}
+	void load(){
+		string location="";
+		string file="myDataSet2";
 		users = new user[USERS];
 		//El contenido que interesa de cada linea se guardara en las siguientes 3 variable
 		double zz=0;
 		ifstream input(file);
 		int i=-1;
 		pair <unsigned short,char> p;			
-		cout<<"Se inicio la lectura del archivo"<<endl;
 		int id;
 		for(string line; getline( input, line );){
 		    if (line[line.size()-1]!=':'){
@@ -182,17 +211,25 @@ public:
 		    	i++;
 
 		    }
-
 		}
-		cout<<" Se creo con "<<zz<<" calificaciones y con "<<i+1<<" usuarios"<<endl;
+		cout<<" usuarios: "<<zz<<" calificaciones: "<<i<<endl;
+	}
+	
+	user getUser(int i){
+		return users[i];
 	}
 	user *randomUsers(int size){
 		user *u = new user[size];
 		int du=USERS/size;
 		for(int i=0;i<size;i++){
 			u[i]=users[du*i];
-		}		 
+		}
+				 
 		return u;
+
+	}
+	double distance (int i,user u ){		
+		return users[i].distance(u,false);
 	}
 	~netflix(){
 		delete [] users;
@@ -203,57 +240,87 @@ public:
 };
 
 
-class kMeans{
+class kmeans{
 private:
-	user **groups; //cambiar por arreglo de listas
+	list<user> *groups;
+	netflix n;
 	user *centroids;
+	user *oldCentroids;
 	double stop;
 	int k;
 public:
-	kMeans(int K,double stp ,netflix n){
-		stop = stp
+	kmeans(int K,double stp ){		
+		stop = stp;		
 		k=K;
+		groups = new list<user>[k];
+		n.load();
 		centroids=n.randomUsers(k);
-		for (int i=0;i<k;i++){
-			centroids[i].print();
-		}
-		groups = new user*[k];
-		for(int i=0;i<k;i++){
-			groups[i] = new
-		}
-		cout<<"FINAL"<<endl;
 	}
-	void iteration(n){
+	void updateCentroids(bool first){
+		if (not first)delete [] oldCentroids;
+		oldCentroids=centroids;
+		centroids = new user[k];
+		for(int i=0;i<k;i++)centroids[i]=user(groups[i],(i*-1)-1);
+		cout<<"DESPUES"<<endl;
+		for(int i=0;i<k;i++){
+			cout<<"old"<<endl;
+			oldCentroids[i].print();
+			cout<<"new"<<endl;
+			centroids[i].print();
+		}			
+		
+	}
+	void iteration(int number){
+		cout<<"INICIO DE ITERACION "<<number<<endl;
 		double lowD,actualD;
 		int centroid;
-		//vaciar listas
-		for(int i=0;i<USERS;i++){
-			lowD = n.distance(i,centroids[0]);
-			centroid=0;	
-			for (int j=1;j<k;j++){
+		int j;
+		int i;
+		bool b=(number==0);
+		for (int i=0;i<k;i++){
+			groups[i].clear();
+		}
+		for(i=0;i<k;i++){
+		}
+		for(i=0;i<USERS;i++){
+			lowD = n.distance(i,centroids[0]);			
+			centroid=0;			
+			for (j=1;j<k;j++){
 				actualD=n.distance(i,centroids[j]);
 				if (actualD<lowD){
 					lowD=actualD;
 					centroid=j;
 				}
 			}
-			//agregar a la lista de el arreglo en la posicion j
+			groups[centroid].push_back(user(n.getUser(i)));
 		}
+		cout<<"termino iteracion"<<endl;
+		updateCentroids(b);
+		cout<<"actualizo centroides"<<endl;
+		if (not over())	iteration(number+1);
 	}
-	~kMeans(){
-		for(int i = 0; i < k; i++)
- 	 		delete[] groups[i];
+	bool over(){
+		double d;
+		for(int i=0;i<k;i++){
+			d=oldCentroids[i].distance(centroids[i],true);
+			cout<<" "<<d<<endl;
+			if(d>stop)return false;
+		}
+
+		cout<<"TERMINO!!!!!!!!!!!!!!"<<endl;
+		return true;		
+	}
+	~kmeans(){
  	 	delete[] groups;
 		delete []centroids;
+		delete []oldCentroids;
 	}	
 };
 
 
 
-int main(int argc, char **argv){
-	srand(time(NULL));
-	netflix n("","myDataSet0");
-	cout << "Desde el inicio han pasado " << clock()/(CLK_TCK*1000) << " segundos\n"<<endl;
-	kMeans k(3,3,n); 
-	return 0;	
+main(int argc, char **argv){
+	//netflix n("","myDataSet0");
+	kmeans  k(2,0);
+	k.iteration(0); 	
 }
