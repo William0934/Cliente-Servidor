@@ -9,7 +9,7 @@
 
 #include <ctime>    //medir el tiempo de ejecucion
 
-#define USERS 102
+#define USERS 10000
 #define MOVIES 17770
 
 using namespace std;
@@ -20,17 +20,17 @@ using namespace std;
 class movie{
 private:
 	int id;
-	char grade;
+	double grade;
 public:
-	movie(unsigned short ID,char GR){
+	movie(unsigned short ID,double GR){
 		id=ID;
 		grade=GR;
 	}
 	
 	
 	unsigned short getId()const{return id;}
-	char getGrade()const{return grade;}
-	void print()const{cout<<id<<": "<<(int)grade<<endl;}
+	double getGrade()const{return grade;}
+	void print()const{cout<<id<<": "<<grade<<endl;}
 	movie& operator = (const movie &p){
 		id=p.getId();
 		grade=p.getGrade();
@@ -40,10 +40,11 @@ public:
 //Las lineas de dataset nuevo tienen el formato "pelicula calificacion"  "17770 5" 
 //computeLine recibe como parametro una de estas lineas y devuelve un pair con el id y la calificacion 
 
-pair <unsigned short,char> computeLine(string line){
+pair <unsigned short,double> computeLine(string line){
 	char i=0;
 	char c=line[0];
 	char temp[8];
+	char temp2[3];
 	while (c!=' '){
 		temp[i]=c;
 		i++;
@@ -52,8 +53,15 @@ pair <unsigned short,char> computeLine(string line){
 	temp[i]='\0';
 	unsigned short id=atoi(temp);
 	i++;
-	c=line[i]-48;
-	pair <unsigned short,char> p(id,c);	
+
+	temp2[0]=line[i];
+	temp2[1]=line[i+1];
+	if (temp[1]!='\n'){
+		temp[2]='\0';
+	}
+	else temp[1]='\0';
+	c=atoi(temp2);
+	pair <unsigned short,double> p(id,c);	
 	return p;
 }
 
@@ -83,25 +91,26 @@ public:
 		movies = u.movies;
 	}
 	user(list<user> group,int Id){
-		id=Id;
-		int siz=MOVIES *2;
-		float data[siz];
-		for (int i = 0;i<siz;i++)data[i]=0;
 		list<user>::iterator it;
 		list<movie>::iterator temp;
+		id=Id;
+		int siz=MOVIES;
+		double data[siz];
+		for (int i = 0;i<siz;i++)data[i]=0;
 		int pos;
 		for(it=group.begin();it!=group.end();it++){
 			for(temp = it->movies.begin();temp!=it->movies.end();temp++){
-				pos=2*(temp->getId()-1);
-				data[pos]=data[pos]+temp->getGrade();
-				data[pos+1]=data[pos+1]+1;
+				pos = temp->getId();
+				data[pos-1]=data[pos-1]+temp->getGrade();
 			}
+
 		}
-		for(int i=0;i<siz;i=i+2)
+		for(int i=0;i<siz;i++)
 			if((data[i])>0)
-				movies.push_back(movie((i/2)+1,round(data[i]/data[i+1])));
-		cout<<"CENTROIDE NUEVO "<<endl;
+				movies.push_back(movie(i+1,data[i]/group.size()));
+		
 	}
+	int getId(){return id;}
 	void addMovie(movie m){
 		movies.push_back(m);			
 	}
@@ -123,8 +132,7 @@ public:
 		
 	}
 
-	double distance(user us,bool over){
-		if (over)cout<<" calculando para un centroide con "<<size()<<" y un centroide con "<<us.size()<<endl;
+	double distance(user us){
 		list<movie>::iterator big=movies.end();
 		big--;    
 		list<movie>::iterator bigEnd; 
@@ -177,7 +185,7 @@ public:
 				sum+=(a*a);
 				big++;
 			}
-		}		
+		}	
 		return sum;
 	}
 	
@@ -191,7 +199,7 @@ public:
 	netflix(){}
 	void load(){
 		string location="";
-		string file="myDataSet2";
+		string file="myDataSet1";
 		users = new user[USERS];
 		//El contenido que interesa de cada linea se guardara en las siguientes 3 variable
 		double zz=0;
@@ -206,13 +214,14 @@ public:
 		    	zz++;
 
 		    }else{
+		    	if((i>-1)and(users[i].size()==0))i--;
 		    	id=getId(line);
 		    	users[i+1]=user(id);
 		    	i++;
 
 		    }
 		}
-		cout<<" usuarios: "<<zz<<" calificaciones: "<<i<<endl;
+		cout<<" usuarios: "<<i+1<<" calificaciones: "<<zz<<endl;
 	}
 	
 	user getUser(int i){
@@ -221,15 +230,13 @@ public:
 	user *randomUsers(int size){
 		user *u = new user[size];
 		int du=USERS/size;
-		for(int i=0;i<size;i++){
-			u[i]=users[du*i];
-		}
-				 
+		for(int i=0;i<size;i++)
+			u[i]=users[(du*i)];				 
 		return u;
 
 	}
 	double distance (int i,user u ){		
-		return users[i].distance(u,false);
+		return users[i].distance(u);
 	}
 	~netflix(){
 		delete [] users;
@@ -246,12 +253,14 @@ private:
 	netflix n;
 	user *centroids;
 	user *oldCentroids;
+	double oldD;
 	double stop;
 	int k;
 public:
 	kmeans(int K,double stp ){		
 		stop = stp;		
 		k=K;
+		oldD=0;
 		groups = new list<user>[k];
 		n.load();
 		centroids=n.randomUsers(k);
@@ -260,33 +269,27 @@ public:
 		if (not first)delete [] oldCentroids;
 		oldCentroids=centroids;
 		centroids = new user[k];
-		for(int i=0;i<k;i++)centroids[i]=user(groups[i],(i*-1)-1);
-		cout<<"DESPUES"<<endl;
-		for(int i=0;i<k;i++){
-			cout<<"old"<<endl;
-			oldCentroids[i].print();
-			cout<<"new"<<endl;
-			centroids[i].print();
-		}			
-		
+		for(int i=0;i<k;i++)
+			centroids[i]=user(groups[i],(i*-1)-1);
+			
 	}
 	void iteration(int number){
+		char c;
 		cout<<"INICIO DE ITERACION "<<number<<endl;
 		double lowD,actualD;
 		int centroid;
 		int j;
 		int i;
 		bool b=(number==0);
-		for (int i=0;i<k;i++){
+		for (int i=0;i<k;i++)
 			groups[i].clear();
-		}
-		for(i=0;i<k;i++){
-		}
 		for(i=0;i<USERS;i++){
-			lowD = n.distance(i,centroids[0]);			
+			if (i%2000==0)cout<<i<<" "<<endl;
+			lowD = n.distance(i,centroids[0]);		
 			centroid=0;			
 			for (j=1;j<k;j++){
-				actualD=n.distance(i,centroids[j]);
+				if (lowD==0)break;
+				actualD=n.distance(i,centroids[j]);;			
 				if (actualD<lowD){
 					lowD=actualD;
 					centroid=j;
@@ -294,20 +297,23 @@ public:
 			}
 			groups[centroid].push_back(user(n.getUser(i)));
 		}
-		cout<<"termino iteracion"<<endl;
+		cout<<"FIN ITERACION"<<endl;
 		updateCentroids(b);
-		cout<<"actualizo centroides"<<endl;
 		if (not over())	iteration(number+1);
 	}
 	bool over(){
-		double d;
+		double d=0;
 		for(int i=0;i<k;i++){
-			d=oldCentroids[i].distance(centroids[i],true);
-			cout<<" "<<d<<endl;
-			if(d>stop)return false;
+			d+=oldCentroids[i].distance(centroids[i]);
 		}
+		if(abs(d-oldD)>stop){
+			oldD=d;
+			return false;
+		}
+		cout<<"TERMINO!!!!!!!!!!!!!!"<<endl;		
+		for(int i=0;i<k;i++)centroids[i].print();
+		for(int i=0;i<groups->size();i++)cout<<" grupo "<<i<<": "<<groups[i].size()<<endl;
 
-		cout<<"TERMINO!!!!!!!!!!!!!!"<<endl;
 		return true;		
 	}
 	~kmeans(){
@@ -321,6 +327,6 @@ public:
 
 main(int argc, char **argv){
 	//netflix n("","myDataSet0");
-	kmeans  k(2,0);
+	kmeans  k(30,0);
 	k.iteration(0); 	
 }
