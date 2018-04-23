@@ -9,12 +9,13 @@
 
 #include <ctime>    //medir el tiempo de ejecucion
 
-#define USERS 10000
+#define USERS 94803
 #define MOVIES 17770
 
 using namespace std;
 
 #define CLK_TCK 1000.0
+#define tempSize 17770
 
 //Las instancias de la clase movie contienen el id de una pelicula y la respectiva calificacion que un usuario le ha dado
 class movie{
@@ -26,8 +27,7 @@ public:
 		id=ID;
 		grade=GR;
 	}
-	
-	
+	movie(){}	
 	unsigned short getId()const{return id;}
 	double getGrade()const{return grade;}
 	void print()const{cout<<id<<": "<<grade<<endl;}
@@ -82,84 +82,93 @@ int getId(string line){
 class user{
 private:
 	int id;
-	list<movie> movies;
+	movie *movies;
+	int tam;
 public:
 	user(int Id){id=Id;}
 	user(){}
 	user(const user &u){
 		id=u.id;
 		movies = u.movies;
+		tam = u.tam;
 	}
 	user(list<user> group,int Id){
 		list<user>::iterator it;
-		list<movie>::iterator temp;
 		id=Id;
 		int siz=MOVIES;
 		double data[siz];
 		for (int i = 0;i<siz;i++)data[i]=0;
 		int pos;
+		movie temp[tempSize];
 		for(it=group.begin();it!=group.end();it++){
-			for(temp = it->movies.begin();temp!=it->movies.end();temp++){
-				pos = temp->getId();
-				data[pos-1]=data[pos-1]+temp->getGrade();
+			for(int i=0;i<it->size();i++){
+				pos=it->movies[i].getId();
+				data[pos-1]=data[pos-1]+it->movies[i].getGrade();
 			}
-
 		}
+		int last=0;
 		for(int i=0;i<siz;i++)
-			if((data[i])>0)
-				movies.push_back(movie(i+1,data[i]/group.size()));
+			if((data[i])>0){
+				temp[last]=movie(i+1,data[i]/group.size());
+				last++;
+			}
+		load(temp,last);
+		tam=last;
 		
 	}
+	void setId(int Id){
+		id=Id;
+	}	
 	int getId(){return id;}
-	void addMovie(movie m){
-		movies.push_back(m);			
+	void addMovie(movie m,int where){
+		movies[where]=m;			
 	}
 	
-	int size(){return movies.size();}
-	
-	list<movie>::iterator begin(){return movies.begin();}
-	list<movie>::iterator end(){return movies.end();}
+	int size(){return tam;}
 	
 	bool print(){
 		cout<<id<<": "<<endl;
-		int i=0;
-		for(list<movie>::iterator it = movies.begin(); it != movies.end() and i<10; it++ ){
-			cout<<" -Id pelicula: "<<it->getId()<<"    Calificacion: "<<(int)it->getGrade()<<endl;
-			i++;
-		}
-
+		for(int i=0;i<10 and i<tam;i++)
+			cout<<" -Id pelicula: "<<movies[i].getId()<<"    Calificacion: "<<movies[i].getGrade()<<endl;
 		return true;
 		
 	}
+	void load(movie m[],int n){
+		movies = new movie[n];
+		for(int i=0;i<n;i++){
+			movies[i]=m[i];
+		}
+		tam=n;
+	}
 
-	double distance(user us){
-		list<movie>::iterator big=movies.end();
-		big--;    
-		list<movie>::iterator bigEnd; 
-		list<movie>::iterator small=us.end();
-		small--;    
-		list<movie>::iterator smallEnd;
-		if(movies.end()->getId()>us.end()->getId()){
-			big      =  movies.begin();
-			small    =  us.begin();
-			bigEnd   =  movies.end();
-			smallEnd =  us.end();
+	double distance(user us){		
+		movie *big;
+		movie *small;    
+		int bigEnd,smallEnd;
+
+		if(movies[tam-1].getId()>us.movies[us.tam-1].getId()){
+			big=movies;
+			small=us.movies;
+			bigEnd=tam;
+			smallEnd=us.size();
 		}else{
-			big      =  us.begin();
-			small    =  movies.begin();
-			bigEnd   =  us.end();
-			smallEnd =  movies.end();
+			big=us.movies;
+			small=movies;
+			bigEnd=us.size();
+			smallEnd=tam;
 		}
 		bool limit = false;
 		double sum = 0.0;
 		double a;
 		double b;
-		unsigned short bId;
-		unsigned short sId;
+		int bId;
+		int sId;
 		//Empieza el ciclo que calcula la sumatoria dentro de la raiz
-		while(big!=bigEnd){
+		int bi=0;
+		int si=0;
+		while(bi<bigEnd){
 			//Marca si la lista mas pequena ya se recorrio
-			if (small==smallEnd) limit=true;
+			if (si==smallEnd) limit=true;
 			//Si no se ha recorrido la pequena	
 			if (!limit){
 				bId = big->getId();
@@ -168,25 +177,33 @@ public:
 					a = big->getGrade();
 					sum+= (a*a);
 					big++;
+					bi++;
 				}else if (bId>sId){
 					b = small->getGrade();
 					sum+= (b*b);
 					small++;
+					si++;
 				}else{
 					a = big->getGrade();
 					b = small->getGrade();
 					sum+= ((a-b)*(a-b));
 					big++;
 					small++;
+					bi++;
+					si++;
 				}
 			//Si ya se recorrio la pequena	
 			}else{
 				a=big->getGrade();
 				sum+=(a*a);
 				big++;
+				bi++;
 			}
-		}	
+		}
 		return sum;
+	}
+	~user(){
+		//delete[] movies;
 	}
 	
 };
@@ -199,7 +216,7 @@ public:
 	netflix(){}
 	void load(){
 		string location="";
-		string file="myDataSet1";
+		string file="myDataSet0";
 		users = new user[USERS];
 		//El contenido que interesa de cada linea se guardara en las siguientes 3 variable
 		double zz=0;
@@ -207,20 +224,29 @@ public:
 		int i=-1;
 		pair <unsigned short,char> p;			
 		int id;
+		int mov;
+		int load=false;
+		movie vec[tempSize];
 		for(string line; getline( input, line );){
 		    if (line[line.size()-1]!=':'){
 		    	p=computeLine(line);
-		    	users[i].addMovie(movie(p.first,p.second));
+		    	vec[mov]=movie(p.first,p.second);
 		    	zz++;
-
+		    	mov++;
+		    	load=true;
 		    }else{
-		    	if((i>-1)and(users[i].size()==0))i--;
+		    	if (load){
+		    		if(mov>0){
+		    			users[i].load(vec,mov);
+		    		}else i--;
+		    	}
+		    	mov=0;		    	
 		    	id=getId(line);
-		    	users[i+1]=user(id);
+		    	users[i+1].setId(id);
 		    	i++;
-
 		    }
 		}
+		users[i].load(vec,mov);
 		cout<<" usuarios: "<<i+1<<" calificaciones: "<<zz<<endl;
 	}
 	
@@ -231,7 +257,8 @@ public:
 		user *u = new user[size];
 		int du=USERS/size;
 		for(int i=0;i<size;i++)
-			u[i]=users[(du*i)];				 
+			u[i]=users[(du*i)];
+		
 		return u;
 
 	}
@@ -266,12 +293,14 @@ public:
 		centroids=n.randomUsers(k);
 	}
 	void updateCentroids(bool first){
+		
 		if (not first)delete [] oldCentroids;
 		oldCentroids=centroids;
 		centroids = new user[k];
 		for(int i=0;i<k;i++)
-			centroids[i]=user(groups[i],(i*-1)-1);
-			
+			centroids[i]=user(groups[i],(i*-1)-1);			
+		
+		
 	}
 	void iteration(int number){
 		char c;
@@ -283,12 +312,14 @@ public:
 		bool b=(number==0);
 		for (int i=0;i<k;i++)
 			groups[i].clear();
-		for(i=0;i<USERS;i++){
-			if (i%2000==0)cout<<i<<" "<<endl;
-			lowD = n.distance(i,centroids[0]);		
+		for(i=0;i<USERS-1;i++){
+			if(i%9000==0)
+				cout<<i<<" "<<endl;
+			lowD = n.distance(i,centroids[0]);
 			centroid=0;			
 			for (j=1;j<k;j++){
 				if (lowD==0)break;
+				
 				actualD=n.distance(i,centroids[j]);;			
 				if (actualD<lowD){
 					lowD=actualD;
@@ -296,8 +327,10 @@ public:
 				}
 			}
 			groups[centroid].push_back(user(n.getUser(i)));
+
 		}
 		cout<<"FIN ITERACION"<<endl;
+		for(int i=0;i<k;i++)cout<<" grupo "<<i<<": "<<groups[i].size()<<endl;
 		updateCentroids(b);
 		if (not over())	iteration(number+1);
 	}
@@ -305,14 +338,13 @@ public:
 		double d=0;
 		for(int i=0;i<k;i++){
 			d+=oldCentroids[i].distance(centroids[i]);
-		}
+		}	
 		if(abs(d-oldD)>stop){
 			oldD=d;
 			return false;
 		}
-		cout<<"TERMINO!!!!!!!!!!!!!!"<<endl;		
-		for(int i=0;i<k;i++)centroids[i].print();
-		for(int i=0;i<groups->size();i++)cout<<" grupo "<<i<<": "<<groups[i].size()<<endl;
+		cout<<"TERMINO!!!!!!!!!!!!!!"<<endl;
+		for(int i=0;i<k;i++)cout<<" grupo "<<i<<": "<<groups[i].size()<<endl;
 
 		return true;		
 	}
@@ -327,6 +359,6 @@ public:
 
 main(int argc, char **argv){
 	//netflix n("","myDataSet0");
-	kmeans  k(30,0);
+	kmeans  k(20,0);
 	k.iteration(0); 	
 }
