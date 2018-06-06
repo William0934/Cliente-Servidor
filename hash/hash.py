@@ -68,14 +68,12 @@ def main():
         ident, op , *args = socket.recv_multipart()
         print(ident," ",op," ",args)
         ident=ident.decode()
-        
-        if op.decode()=="add":            
+        op=op.decode()
+        if op=="add":            
             if not validKey(nodes,ident):
                 socket.send_multipart([bytes(ident,'ascii') ,bytes("refused", 'ascii')])
             else:
-                print('loading')
                 nodes[ident]=(args[0].decode(),args[1].decode())
-                print(ident," ",nodes[ident])
                 for key in nodes:
                     if key in fingers:
                         temp=fingers[key]
@@ -87,9 +85,23 @@ def main():
                         for finger in fingers[key]:
                             temp.append(bytes(str(finger)+" "+str(nodes[str(finger)][0])+" "+str(nodes[str(finger)][1]),'ascii'))
                         msg+=temp
-                        print("msg: ",msg)
                         socket.send_multipart(msg)
-                print('finishing')
+        if op=='leave':
+            nodes.pop(ident)
+            fingers.pop(ident)
+            for key in nodes:
+                if key in fingers:
+                    temp=fingers[key]
+                else: temp=None
+                fingers[key]=getFingerTable(nodes,key)
+                if not equal(fingers[key],temp):
+                    msg=[bytes(key,'ascii'),bytes("update", 'ascii')]
+                    temp=[]
+                    for finger in fingers[key]:
+                        temp.append(bytes(str(finger)+" "+str(nodes[str(finger)][0])+" "+str(nodes[str(finger)][1]),'ascii'))
+                    msg+=temp
+                    socket.send_multipart(msg)
+
                     
                 
 
