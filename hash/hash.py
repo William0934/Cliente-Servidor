@@ -1,8 +1,10 @@
 import zmq
 from math import pow
 import sys
+from random import randint
 
 numberOfBytes=5
+
 
 def validKey(dict,key):
     keys = list(dict.keys())
@@ -55,6 +57,7 @@ def main():
         print("Invalid port")
         exit()
 
+    usedkeyslist=[]
     context = zmq.Context()
     socket = context.socket(zmq.ROUTER)
 
@@ -102,6 +105,20 @@ def main():
                     msg+=temp
                     socket.send_multipart(msg)
 
+        if op=="store":
+            numberparts=args[1]
+            temp=[]
+            for i in range(int(numberparts)):
+                z=randint(0,2**numberOfBytes)
+                while z in usedkeyslist:
+                    print(z)
+                    z=randint(0,2**numberOfBytes)
+                usedkeyslist.append(z)
+                temp.append(bytes(str(z),'ascii'))
+            msg=[bytes(key,'ascii'),bytes('send','ascii')]
+            msg+=temp
+            socket.send_multipart(msg)            
+            print(msg)
                     
                 
 

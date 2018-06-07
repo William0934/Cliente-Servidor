@@ -2,8 +2,10 @@ import zmq
 import sys
 import threading
 import os
+from math import ceil
 
 numberOfBytes=5
+sizepart=1000
 
 def migrate(reqSocket,context,files,fingerTable):
     for key in fingerTable:
@@ -13,6 +15,13 @@ def migrate(reqSocket,context,files,fingerTable):
         ans=reqSocket.recv_json()
         reqSocket.close()
         reqSocket = context.socket( zmq.REQ )
+
+def store(serverSocket, namefile, numberparts):
+    print(namefile)
+    print(numberparts)
+    serverSocket.send_multipart([bytes('store', 'ascii'),bytes(namefile,'ascii'),bytes(str(numberparts),'ascii')])
+    print("OK")
+
 
 def getNext(identity,keys):
     print (identity)
@@ -122,6 +131,9 @@ def main():
                 break
             if command[0]=='store':
                 if os.path.exists("store/"+command[1]):
+                    sizefile = os.path.getsize("store/"+command[1]) 
+                    numberparts=ceil(sizefile/sizepart)
+                    store(serverSocket, command[1],numberparts)
                     print("El archivo Existe")
                 else:
                     print("El archivo no existe")
